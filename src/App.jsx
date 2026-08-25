@@ -28,25 +28,19 @@ export default function App() {
   const cau3 = watch('cau3')
 
   const onSubmit = async (data) => {
-    setErrorMsg('')
-    try {
-      if (SUPABASE_URL.includes('YOUR_PROJECT')) {
-        console.log('Dữ liệu khảo sát:', data)
-        alert('Demo: Dữ liệu đã log ra console (F12). Hãy cấu hình Supabase để lưu thật.')
-        setSubmitted(true)
-        return
-      }
-      const { error } = await supabase.from('khao_sat_phieu1').insert([{
-        ...data,
-        submitted_at: new Date().toISOString()
-      }])
-      if (error) throw error
-      setSubmitted(true)
-    } catch (err) {
-      console.error(err)
-      setErrorMsg(err.message || 'Có lỗi khi gửi phiếu. Vui lòng thử lại.')
-    }
+  setErrorMsg('')
+  try {
+    const { error } = await supabase
+      .from('khao_sat_phieu1')
+      .insert([{ answers: data }])   // lưu tất cả vào cột answers
+
+    if (error) throw error
+    setSubmitted(true)
+  } catch (err) {
+    console.error(err)
+    setErrorMsg(err.message || 'Có lỗi khi gửi phiếu. Vui lòng thử lại.')
   }
+}
 
   if (submitted) {
     return (
