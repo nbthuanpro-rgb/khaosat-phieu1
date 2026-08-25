@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form'
 import { createClient } from '@supabase/supabase-js'
 
 // Thay 2 giá trị này bằng URL và anon key thật của bạn từ Supabase
-const SUPABASE_URL = 'https://xxxxx.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOi...'
+const SUPABASE_URL = 'https://sqicpllcgerwydrmwjqu.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_PshFpqGI5igv7fKiIGPsaQ_wouAItW1'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
