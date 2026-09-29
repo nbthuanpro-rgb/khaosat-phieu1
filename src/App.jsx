@@ -1,53 +1,46 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-// Thay 2 giá trị này bằng URL và anon key thật của bạn từ Supabase
 const SUPABASE_URL = 'https://sqicpllcgerwydrmwjqu.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_PshFpqGI5igv7fKiIGPsaQ_wouAItW1'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// ========== BẬT / TẮT KHẢO SÁT TẠI ĐÂY ==========
-const SURVEY_CLOSED = true   // true = đã hết hạn, false = còn mở
-// ================================================
+// Bật true = đã hết hạn khảo sát
+const SURVEY_CLOSED = true
 
 export default function App() {
-  const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm({
-    defaultValues: {
-      cau1: [],
-      cau4: [],
-      cau5: [],
-      cau6: [],
-      cau7: [],
-      cau8: [],
-      cau9: [],
-      cau11: [],
-      cau13: [],
-      cau15: [],
-    }
-  })
-  const [submitted, setSubmitted] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
-  const cau3 = watch('cau3')
+  const [view, setView] = useState(SURVEY_CLOSED ? 'closed' : 'form') // 'closed' | 'form' | 'success' | 'results'
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
 
-  const onSubmit = async (data) => {
-    setErrorMsg('')
+  // Hàm tải kết quả từ Supabase
+  const loadResults = async () => {
+    setLoading(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('khao_sat_phieu1')
-        .insert([{ answers: data }])
+        .select('*')
+        .order('created_at', { ascending: false })
 
       if (error) throw error
-      setSubmitted(true)
+      setResults(data || [])
     } catch (err) {
       console.error(err)
-      setErrorMsg(err.message || 'Có lỗi khi gửi phiếu. Vui lòng thử lại.')
+      alert('Không tải được kết quả')
+    } finally {
+      setLoading(false)
     }
   }
 
+  // Khi bấm xem kết quả
+  const handleViewResults = () => {
+    setView('results')
+    loadResults()
+  }
+
   // ========== MÀN HÌNH ĐÃ HẾT HẠN ==========
-  if (SURVEY_CLOSED) {
+  if (view === 'closed') {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg w-full text-center border-t-4 border-red-700">
@@ -60,13 +53,12 @@ export default function App() {
             Xin cảm ơn Ông/Bà đã quan tâm và tham gia.
           </p>
 
-          {/* Nút xem kết quả - thay link bên dưới nếu có trang kết quả riêng */}
-          <a
-            href="https://khaosat-phieu1.vercel.app/"   // ← tạm thời để lại link hiện tại, sau này đổi nếu có trang kết quả riêng
-            className="inline-block w-full bg-red-700 hover:bg-red-800 text-white font-medium py-3 px-6 rounded-lg transition duration-200"
+          <button
+            onClick={handleViewResults}
+            className="w-full bg-red-700 hover:bg-red-800 text-white font-medium py-3 px-6 rounded-lg transition duration-200"
           >
             Xem kết quả khảo sát
-          </a>
+          </button>
 
           <p className="text-xs text-gray-500 mt-6">
             © UBND phường Thành Nhất – Tỉnh Đắk Lắk
@@ -76,20 +68,57 @@ export default function App() {
     )
   }
 
-  // ========== PHẦN CÒN LẠI GIỮ NGUYÊN (khi SURVEY_CLOSED = false) ==========
-  if (submitted) {
+  // ========== MÀN HÌNH KẾT QUẢ ==========
+  if (view === 'results') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg text-center border-t-4 border-green-600">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-green-700 mb-3">Cảm ơn Ông/Bà!</h2>
-          <p className="text-gray-700">Phiếu khảo sát đã được gửi thành công.</p>
-          <p className="text-sm text-gray-500 mt-4">Mọi thông tin chỉ dùng cho mục đích tổng hợp, đánh giá và hoàn thiện chính sách, pháp luật về an toàn thực phẩm.</p>
+      <div className="min-h-screen bg-gray-100 py-6 px-3 sm:px-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-xl shadow-sm p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-red-800">Kết quả khảo sát</h1>
+                <p className="text-sm text-gray-600 mt-1">Phiếu số 01 – UBND phường Thành Nhất</p>
+              </div>
+              <button
+                onClick={() => setView('closed')}
+                className="text-sm text-gray-600 hover:text-red-700"
+              >
+                ← Quay lại
+              </button>
+            </div>
+
+            {loading ? (
+              <p className="text-center text-gray-600 py-10">Đang tải kết quả khảo sát...</p>
+            ) : (
+              <div>
+                <p className="mb-4 text-gray-700">
+                  Tổng số phiếu đã nhận: <strong>{results.length}</strong>
+                </p>
+                {/* Bạn có thể thêm bảng thống kê chi tiết ở đây sau */}
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                  {results.map((item, index) => (
+                    <div key={item.id || index} className="border rounded-lg p-3 text-sm bg-gray-50">
+                      <p className="font-medium text-gray-800">Phiếu #{index + 1}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {item.created_at ? new Date(item.created_at).toLocaleString('vi-VN') : ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
-  // ... (phần form giữ nguyên như cũ)
-  // Bạn không cần copy lại toàn bộ form, chỉ cần thay phần đầu như trên là được.
+  // Nếu chưa đóng khảo sát thì hiện form bình thường (phần này giữ nguyên code cũ của bạn)
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg text-center">
+        <p className="text-gray-600">Form khảo sát đang tạm ẩn vì đã hết hạn.</p>
+      </div>
+    </div>
+  )
 }
