@@ -6,13 +6,14 @@ const SUPABASE_ANON_KEY = 'sb_publishable_PshFpqGI5igv7fKiIGPsaQ_wouAItW1'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// true = đã hết hạn khảo sát
+// true = đã hết hạn
 const SURVEY_CLOSED = true
 
 export default function App() {
   const [view, setView] = useState(SURVEY_CLOSED ? 'closed' : 'form')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
+  const [stats, setStats] = useState({})
 
   const loadResults = async () => {
     setLoading(true)
@@ -24,15 +25,52 @@ export default function App() {
 
       if (error) throw error
       setResults(data || [])
+      calculateStats(data || [])
     } catch (err) {
       console.error(err)
-      alert('Không tải được kết quả khảo sát')
+      alert('Không tải được kết quả')
     } finally {
       setLoading(false)
     }
   }
 
-  // ========== MÀN HÌNH ĐÃ HẾT HẠN ==========
+  // Hàm tính thống kê
+  const calculateStats = (data) => {
+    const total = data.length
+    if (total === 0) {
+      setStats({})
+      return
+    }
+
+    // Lấy tất cả câu trả lời
+    const allAnswers = data.map(item => item.answers || {})
+
+    // Hàm đếm số lần xuất hiện của từng lựa chọn
+    const countOptions = (field) => {
+      const counts = {}
+      allAnswers.forEach(ans => {
+        const value = ans[field]
+        if (Array.isArray(value)) {
+          value.forEach(v => {
+            counts[v] = (counts[v] || 0) + 1
+          })
+        } else if (value) {
+          counts[value] = (counts[value] || 0) + 1
+        }
+      })
+      return counts
+    }
+
+    setStats({
+      total,
+      // Bạn có thể thêm các câu hỏi khác tương tự
+      cau2: countOptions('cau2'),
+      cau3: countOptions('cau3'),
+      // Thêm các câu khác nếu cần
+    })
+  }
+
+  // ========== MÀN HÌNH HẾT HẠN ==========
   if (view === 'closed') {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -45,17 +83,15 @@ export default function App() {
             Thời gian thu thập phiếu khảo sát đã kết thúc.<br />
             Xin cảm ơn Ông/Bà đã quan tâm và tham gia.
           </p>
-
           <button
             onClick={() => {
               setView('results')
               loadResults()
             }}
-            className="w-full bg-red-700 hover:bg-red-800 text-white font-medium py-3 px-6 rounded-lg transition duration-200"
+            className="w-full bg-red-700 hover:bg-red-800 text-white font-medium py-3 px-6 rounded-lg transition"
           >
             Xem kết quả khảo sát
           </button>
-
           <p className="text-xs text-gray-500 mt-6">
             © UBND phường Thành Nhất – Tỉnh Đắk Lắk
           </p>
@@ -64,90 +100,84 @@ export default function App() {
     )
   }
 
-  // ========== MÀN HÌNH KẾT QUẢ (giống style cũ) ==========
+  // ========== MÀN HÌNH KẾT QUẢ (giống hình bạn gửi) ==========
   if (view === 'results') {
     return (
       <div className="min-h-screen bg-gray-100 py-6 px-3 sm:px-4">
         <div className="max-w-3xl mx-auto">
-          {/* Header giống phiếu khảo sát */}
-          <div className="bg-white rounded-t-xl border-t-4 border-red-700 shadow-sm p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-              <div className="text-sm text-gray-700">
-                <p className="font-bold text-red-800">UBND phường Thành Nhất</p>
-                <p className="text-xs sm:text-sm">Địa chỉ: 178 Phan Huy Chú, phường Thành Nhất, tỉnh Đắk Lắk</p>
+          {/* Header */}
+          <div className="bg-white rounded-xl shadow-sm border-t-4 border-red-700 p-5 sm:p-6 mb-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-red-800">Kết quả khảo sát</h1>
+                <p className="text-sm text-gray-600 mt-1">Phiếu số 01 – UBND phường Thành Nhất</p>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-red-800 text-sm sm:text-base">PHIẾU SỐ 01</p>
-                <p className="text-xs sm:text-sm text-gray-600">Kết quả khảo sát</p>
-              </div>
+              <button
+                onClick={() => setView('closed')}
+                className="text-sm border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+              >
+                ← Quay lại
+              </button>
             </div>
 
-            <h2 className="text-center text-base sm:text-xl font-bold text-red-800 uppercase leading-snug mt-2">
-              KẾT QUẢ KHẢO SÁT
-            </h2>
-            <h3 className="text-center text-sm sm:text-base font-semibold text-red-700 mt-1 leading-snug">
-              Tình hình thi hành văn bản quy phạm pháp luật<br />
-              lĩnh vực an toàn thực phẩm trên địa bàn phường
-            </h3>
+            {/* Tổng số phiếu */}
+            <div className="mt-5 p-4 bg-red-50 rounded-lg border border-red-100">
+              <p className="text-center text-red-800 font-medium">
+                Tổng số phản hồi đã ghi nhận: <span className="text-2xl font-bold">{stats.total || 0}</span>
+              </p>
+            </div>
           </div>
 
-          {/* Nội dung kết quả */}
-          <div className="bg-white rounded-b-xl shadow-sm p-5 sm:p-6">
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="inline-block w-8 h-8 border-4 border-red-700 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-600">Đang tải kết quả khảo sát...</p>
-              </div>
-            ) : (
-              <>
-                <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-100">
-                  <p className="text-center text-lg font-semibold text-red-800">
-                    Tổng số phiếu đã nhận: <span className="text-2xl">{results.length}</span>
-                  </p>
-                </div>
+          {loading ? (
+            <div className="bg-white rounded-xl p-10 text-center shadow-sm">
+              <div className="inline-block w-8 h-8 border-4 border-red-700 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p className="text-gray-600">Đang tải kết quả khảo sát...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Ví dụ phần A - Thông tin chung */}
+              <div className="bg-white rounded-xl shadow-sm p-5 sm:p-6">
+                <h2 className="text-lg font-bold text-red-800 mb-4">A. Thông tin chung</h2>
 
-                {results.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">Chưa có dữ liệu khảo sát.</p>
-                ) : (
-                  <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-                    {results.map((item, index) => (
-                      <div key={item.id || index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-semibold text-red-800">Phiếu #{results.length - index}</span>
-                          <span className="text-xs text-gray-500">
-                            {item.created_at
-                              ? new Date(item.created_at).toLocaleString('vi-VN')
-                              : ''}
-                          </span>
-                        </div>
-                        <pre className="text-xs text-gray-700 whitespace-pre-wrap break-words bg-white p-3 rounded border">
-                          {JSON.stringify(item.answers || item, null, 2)}
-                        </pre>
-                      </div>
-                    ))}
+                {/* Ví dụ một câu hỏi có thanh tiến trình */}
+                {stats.cau2 && Object.keys(stats.cau2).length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-medium text-gray-800 mb-3">2. Đánh giá hiệu quả tuyên truyền</h3>
+                    <div className="space-y-3">
+                      {Object.entries(stats.cau2)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([option, count]) => {
+                          const percent = ((count / stats.total) * 100).toFixed(1)
+                          return (
+                            <div key={option}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-700">{option}</span>
+                                <span className="font-medium text-red-700">{count} ({percent}%)</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div
+                                  className="bg-red-600 h-2.5 rounded-full transition-all"
+                                  style={{ width: `${percent}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
                   </div>
                 )}
 
-                <div className="mt-6 text-center">
-                  <button
-                    onClick={() => setView('closed')}
-                    className="px-6 py-2.5 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium rounded-lg transition"
-                  >
-                    ← Quay lại
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <p className="text-center text-xs text-gray-500 mt-6 pb-4">
-            © UBND phường Thành Nhất – Tỉnh Đắk Lắk
-          </p>
+                {/* Bạn có thể copy đoạn trên để thêm các câu hỏi khác */}
+                <p className="text-sm text-gray-500 mt-4">
+                  * Đang hiển thị một số câu hỏi mẫu. Có thể bổ sung thêm các câu khác.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
   }
 
-  // Phòng trường hợp chưa đóng
   return null
 }
